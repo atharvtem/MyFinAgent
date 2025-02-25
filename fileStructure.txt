@@ -1,0 +1,9 @@
+📂 AI-Stock-Analyst/
+│── 📂 data/                 # Store fetched stock data (optional)
+│── 📂 agents/               # AI agent scripts
+│── 📂 visualizations/       # Graphs & charts scripts
+│── 📂 analysis/             # Technical indicators & sentiment analysis
+│── app.py                   # Main application (Streamlit)
+│── fetch_stock.py           # Stock data fetching script
+│── requirements.txt         # Dependencies
+│── README.md                # Project Documentation
