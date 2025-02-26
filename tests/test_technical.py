@@ -1,6 +1,6 @@
 from fetch_stock import fetch_stock_data
 from analysis.technical_analysis import add_technical_indicators
-from visualize_stock import plot_stock_plotly
+from visualizations.visualize_stock import plot_stock_plotly
 
 # Fetch data
 ticker = "MSFT"

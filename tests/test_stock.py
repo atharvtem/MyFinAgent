@@ -1,5 +1,5 @@
 from fetch_stock import fetch_stock_data
-from visualize_stock import plot_stock_matplotlib, plot_stock_plotly
+from visualizations.visualize_stock import plot_stock_matplotlib, plot_stock_plotly
 
 ticker = "AAPL"  # Apple stock
 data = fetch_stock_data(ticker, period="6mo")

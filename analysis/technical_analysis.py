@@ -23,3 +23,12 @@ def add_technical_indicators(data):
     data = calculate_rsi(data, window=14)
     data = calculate_macd(data)
     return data
+
+def generate_technical_summary(data):
+    """Generate a summary of technical indicators."""
+    summary = {
+        "RSI": data["RSI"].iloc[-1],  # Latest RSI value
+        "MACD": data["MACD_12_26_9"].iloc[-1],  # Latest MACD value
+        "Signal": data["MACDs_12_26_9"].iloc[-1],  # Latest Signal value
+    }
+    return summary
