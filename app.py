@@ -8,25 +8,8 @@ from stock_search import stock_mapping, get_stock_ticker, get_stock_suggestions
 # Streamlit App Title
 st.title("AI Stock Analyst")
 
-# Sidebar for stock search directory
-st.sidebar.header("Stock Search Directory")
-
-# Search by stock name
-search_query = st.sidebar.text_input("Search by stock name (e.g., Google):", "").strip().title()
-
-# Get stock suggestions for the dropdown
-suggestions = get_stock_suggestions(search_query)
-
-# Dropdown for selecting a stock
-if suggestions:
-    selected_stock_name = st.sidebar.selectbox("Select a stock:", suggestions)
-    selected_ticker = stock_mapping[selected_stock_name]
-else:
-    selected_ticker = "AAPL"
-    st.text("No Stock found")  # Default ticker if no match is found
-
-# Main input for stock ticker (auto-populated from sidebar selection)
-ticker = st.text_input("Enter Stock Ticker (e.g., AAPL):", selected_ticker)
+# Inputs
+ticker = st.text_input("Enter Stock Ticker (e.g., AAPL):", "AAPL")
 period = st.selectbox("Select Period:", ["1mo", "3mo", "6mo", "1y"])
 
 # Analyze Button
