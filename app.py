@@ -3,12 +3,30 @@ from fetch_stock import fetch_stock_data, fetch_stock_news
 from analysis.technical_analysis import add_technical_indicators, generate_technical_summary
 from analysis.sentiment_analysis import analyze_sentiment
 from visualizations.visualize_stock import plot_stock_plotly
+from stock_search import stock_mapping, get_stock_ticker, get_stock_suggestions
 
 # Streamlit App Title
 st.title("AI Stock Analyst")
 
-# Inputs
-ticker = st.text_input("Enter Stock Ticker (e.g., AAPL):", "AAPL")
+# Sidebar for stock search directory
+st.sidebar.header("Stock Search Directory")
+
+# Search by stock name
+search_query = st.sidebar.text_input("Search by stock name (e.g., Google):", "").strip().title()
+
+# Get stock suggestions for the dropdown
+suggestions = get_stock_suggestions(search_query)
+
+# Dropdown for selecting a stock
+if suggestions:
+    selected_stock_name = st.sidebar.selectbox("Select a stock:", suggestions)
+    selected_ticker = stock_mapping[selected_stock_name]
+else:
+    selected_ticker = "AAPL"
+    st.text("No Stock found")  # Default ticker if no match is found
+
+# Main input for stock ticker (auto-populated from sidebar selection)
+ticker = st.text_input("Enter Stock Ticker (e.g., AAPL):", selected_ticker)
 period = st.selectbox("Select Period:", ["1mo", "3mo", "6mo", "1y"])
 
 # Analyze Button
@@ -50,90 +68,46 @@ if st.button("Analyze"):
     st.write(f"**MACD Interpretation:** {macd_interpretation}")
 
     # Fetch and analyze news sentiment
-    # Fetch and analyze news sentiment
-# Fetch and analyze news sentiment
-
     st.subheader("Sentiment Analysis")
+    news = fetch_stock_news(ticker)
+    if news:
+        st.write(f"Top 5 news headlines for {ticker}:")
+        sentiment_scores = []
+        sentiment_labels = []
 
-ticker = st.text_input("Enter Stock Ticker:", "AAPL")
+        for item in news[:5]:  # Show top 5 news items
+            title = item.get("title", "No title available")
+            source = item.get("source", {}).get("name", "No source available")
 
-# Fetch news for the given stock ticker
-news = fetch_stock_news(ticker)
+            st.write(f"**{title}**")
+            st.write(f"Source: {source}")
 
-if news:
-    st.write(f"Top 5 news headlines for {ticker}:")
-    sentiment_scores = []
-    sentiment_labels = []
+            # Analyze sentiment
+            dominant_sentiment, dominant_value = analyze_sentiment(title)
+            sentiment_scores.append(dominant_value)
+            sentiment_labels.append(dominant_sentiment)
 
-    for item in news[:5]:  # Show top 5 news items
-        title = item.get("title", "No title available")
-        source = item.get("source", {}).get("name", "No source available")
+            st.write(f"Sentiment: {dominant_sentiment} ({dominant_value:.2f})")
+            st.write("---")
 
-        st.write(f"**{title}**")
-        st.write(f"Source: {source}")
+        # Sentiment Summary
+        positive_count = sentiment_labels.count("Positive")
+        negative_count = sentiment_labels.count("Negative")
+        neutral_count = sentiment_labels.count("Neutral")
 
-        # Analyze sentiment
-        dominant_sentiment, dominant_value = analyze_sentiment(title)
-        sentiment_scores.append(dominant_value)
-        sentiment_labels.append(dominant_sentiment)
+        # Determine overall sentiment based on majority voting
+        if positive_count > negative_count and positive_count > neutral_count:
+            overall_sentiment = "Positive"
+        elif negative_count > positive_count and negative_count > neutral_count:
+            overall_sentiment = "Negative"
+        else:
+            overall_sentiment = "Neutral"
 
-        st.write(f"Sentiment: {dominant_sentiment} ({dominant_value:.2f})")
-        st.write("---")
+        avg_sentiment = sum(sentiment_scores) / len(sentiment_scores) if sentiment_scores else 0
 
-    # **Fixed Sentiment Summary Calculation**
-    positive_count = sentiment_labels.count("Positive")
-    negative_count = sentiment_labels.count("Negative")
-    neutral_count = sentiment_labels.count("Neutral")
+        st.subheader("Sentiment Summary")
+        st.write(f"Average Sentiment Score: {avg_sentiment:.2f}")
+        st.write(f"Overall Sentiment: {overall_sentiment}")
 
-    # Determine overall sentiment based on majority voting
-    if positive_count > negative_count and positive_count > neutral_count:
-        overall_sentiment = "Positive"
-    elif negative_count > positive_count and negative_count > neutral_count:
-        overall_sentiment = "Negative"
     else:
-        overall_sentiment = "Neutral"
-
-    avg_sentiment = sum(sentiment_scores) / len(sentiment_scores) if sentiment_scores else 0
-
-    st.subheader("Sentiment Summary")
-    st.write(f"Average Sentiment Score: {avg_sentiment:.2f}")
-    st.write(f"Overall Sentiment: {overall_sentiment}")
-
-else:
-    st.write("No news available for this stock.")
-
-
-
-# st.subheader("Sentiment Analysis")
-# news = fetch_stock_news(ticker)
-# if news:
-#     st.write(f"Top 5 news headlines for {ticker}:")
-#     sentiment_scores = []
-#     for item in news[:5]:  # Show top 5 news items
-#         title = item.get("title", "No title available")
-#         source = item.get("source", {}).get("name", "No source available")
-#         st.write(f"**{title}**")
-#         st.write(f"Source: {source}")
-        
-#         # Analyze sentiment
-#         sentiment_dict = analyze_sentiment(title)
-#         dominant_sentiment = max(sentiment_dict, key=sentiment_dict.get)  # Get the highest sentiment
-#         dominant_value = sentiment_dict[dominant_sentiment]
-
-#         st.write(f"Sentiment: {dominant_sentiment} ({dominant_value:.2f})")
-
-#         sentiment_scores.append(dominant_value)
-#         st.write("---")
-    
-#     # Sentiment Summary
-#     avg_sentiment = sum(sentiment_scores) / len(sentiment_scores) if sentiment_scores else 0
-#     st.subheader("Sentiment Summary")
-#     st.write(f"Average Sentiment: {avg_sentiment:.2f}")
-#     if avg_sentiment > 0:
-#         st.write("Overall Sentiment: Positive")
-#     elif avg_sentiment < 0:
-#         st.write("Overall Sentiment: Negative")
-#     else:
-#         st.write("Overall Sentiment: Neutral")
-# else:
-#     st.write("No news available for this stock.")
+        st.write("No news available for this stock.")
