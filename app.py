@@ -1,96 +1,170 @@
 import streamlit as st
-from fetch_stock import fetch_stock_data, fetch_stock_news
-from analysis.technical_analysis import add_technical_indicators, generate_technical_summary
-from analysis.sentiment_analysis import analyze_sentiment
+import langgraph.graph as lg
+from agents.data_fetcher import fetch_stock_data
+from agents.technical_analyst import analyze_technical_indicators
+from agents.sentiment_analyst import analyze_sentiment
 from visualizations.visualize_stock import plot_stock_plotly
-from stock_search import stock_mapping, get_stock_ticker, get_stock_suggestions
 
-# Streamlit App Title
-st.title("AI Stock Analyst")
+# Define the workflow
+from langgraph.graph import StateGraph  # Import StateGraph
 
-# Inputs
+from typing import TypedDict
+from langgraph.graph import StateGraph
+
+# Define the schema for state tracking
+class StockAnalysisState(TypedDict):
+    ticker: str
+    period: str
+    stock_data: dict
+    technical_data: dict
+    sentiment_analysis: str
+
+# Initialize StateGraph with the schema
+graph = StateGraph(StockAnalysisState)
+graph.add_node("fetch_stock_data", fetch_stock_data)
+graph.add_node("analyze_technical", analyze_technical_indicators)
+graph.add_node("analyze_sentiment", analyze_sentiment)
+
+graph.set_entry_point("fetch_stock_data")
+graph.add_edge("fetch_stock_data", "analyze_technical")
+graph.add_edge("fetch_stock_data", "analyze_sentiment")
+
+graph_executor = graph.compile()
+
+# Streamlit App
+st.title("AI Stock Analyst with LangGraph")
+
 ticker = st.text_input("Enter Stock Ticker (e.g., AAPL):", "AAPL")
 period = st.selectbox("Select Period:", ["1mo", "3mo", "6mo", "1y"])
 
-# Analyze Button
 if st.button("Analyze"):
-    # Fetch stock data
-    st.write(f"Fetching data for {ticker}...")
-    data = fetch_stock_data(ticker, period=period)
-    
-    # Add technical indicators
-    data = add_technical_indicators(data)
-
-    # Display stock price and technical analysis
-    st.subheader(f"{ticker} Stock Price Trend & Technical Analysis")
-    st.plotly_chart(plot_stock_plotly(data, ticker))
-
-    # Display technical summary
-    st.subheader("Technical Analysis Summary")
-    summary = generate_technical_summary(data)
-
-    # RSI Interpretation
-    rsi_value = summary['RSI']
-    if rsi_value > 70:
-        rsi_interpretation = "Overbought (Potential Sell)"
-    elif rsi_value < 30:
-        rsi_interpretation = "Oversold (Potential Buy)"
-    else:
-        rsi_interpretation = "Neutral"
-    st.write(f"**RSI (14):** {rsi_value:.2f} ({rsi_interpretation})")
-
-    # MACD Interpretation
-    macd_value = summary['MACD']
-    signal_value = summary['Signal']
-    if macd_value > signal_value:
-        macd_interpretation = "Potential Buy (MACD > Signal)"
-    else:
-        macd_interpretation = "Potential Sell (MACD < Signal)"
-    st.write(f"**MACD:** {macd_value:.2f}")
-    st.write(f"**Signal Line:** {signal_value:.2f}")
-    st.write(f"**MACD Interpretation:** {macd_interpretation}")
-
-    # Fetch and analyze news sentiment
+    result = graph_executor.invoke({"ticker": ticker, "period": period})
+    st.subheader(f"Technical Analysis for {ticker}")
+    st.write(result["technical_data"])
     st.subheader("Sentiment Analysis")
-    news = fetch_stock_news(ticker)
-    if news:
-        st.write(f"Top 5 news headlines for {ticker}:")
-        sentiment_scores = []
-        sentiment_labels = []
+    st.write(result["sentiment_analysis"])
+    st.plotly_chart(plot_stock_plotly(result["technical_data"], ticker))
 
-        for item in news[:5]:  # Show top 5 news items
-            title = item.get("title", "No title available")
-            source = item.get("source", {}).get("name", "No source available")
 
-            st.write(f"**{title}**")
-            st.write(f"Source: {source}")
 
-            # Analyze sentiment
-            dominant_sentiment, dominant_value = analyze_sentiment(title)
-            sentiment_scores.append(dominant_value)
-            sentiment_labels.append(dominant_sentiment)
 
-            st.write(f"Sentiment: {dominant_sentiment} ({dominant_value:.2f})")
-            st.write("---")
 
-        # Sentiment Summary
-        positive_count = sentiment_labels.count("Positive")
-        negative_count = sentiment_labels.count("Negative")
-        neutral_count = sentiment_labels.count("Neutral")
 
-        # Determine overall sentiment based on majority voting
-        if positive_count > negative_count and positive_count > neutral_count:
-            overall_sentiment = "Positive"
-        elif negative_count > positive_count and negative_count > neutral_count:
-            overall_sentiment = "Negative"
-        else:
-            overall_sentiment = "Neutral"
 
-        avg_sentiment = sum(sentiment_scores) / len(sentiment_scores) if sentiment_scores else 0
 
-        st.subheader("Sentiment Summary")
-        st.write(f"Average Sentiment Score: {avg_sentiment:.2f}")
-        st.write(f"Overall Sentiment: {overall_sentiment}")
 
-    else:
-        st.write("No news available for this stock.")
+
+
+# import streamlit as st
+# from fetch_stock import fetch_stock_data, fetch_stock_news
+# from analysis.technical_analysis import add_technical_indicators, generate_technical_summary
+# from analysis.sentiment_analysis import analyze_sentiment
+# from visualizations.visualize_stock import plot_stock_plotly
+# from stock_search import stock_mapping, get_stock_ticker, get_stock_suggestions
+
+# # Streamlit App Title
+# st.title("AI Stock Analyst")
+
+# # Sidebar for stock search directory
+# st.sidebar.header("Stock Search Directory")
+
+# # Search by stock name
+# search_query = st.sidebar.text_input("Search by stock name (e.g., Google):", "").strip().title()
+
+# # Get stock suggestions for the dropdown
+# suggestions = get_stock_suggestions(search_query)
+
+# # Dropdown for selecting a stock
+# if suggestions:
+#     selected_stock_name = st.sidebar.selectbox("Select a stock:", suggestions)
+#     selected_ticker = stock_mapping[selected_stock_name]
+# else:
+#     selected_ticker = "AAPL"
+#     st.text("No Stock found")  # Default ticker if no match is found
+
+# # Main input for stock ticker (auto-populated from sidebar selection)
+# ticker = st.text_input("Enter Stock Ticker (e.g., AAPL):", selected_ticker)
+# period = st.selectbox("Select Period:", ["1mo", "3mo", "6mo", "1y"])
+
+# # Analyze Button
+# if st.button("Analyze"):
+#     # Fetch stock data
+#     st.write(f"Fetching data for {ticker}...")
+#     data = fetch_stock_data(ticker, period=period)
+    
+#     # Add technical indicators
+#     data = add_technical_indicators(data)
+
+#     # Display stock price and technical analysis
+#     st.subheader(f"{ticker} Stock Price Trend & Technical Analysis")
+#     st.plotly_chart(plot_stock_plotly(data, ticker))
+
+#     # Display technical summary
+#     st.subheader("Technical Analysis Summary")
+#     summary = generate_technical_summary(data)
+
+#     # RSI Interpretation
+#     rsi_value = summary['RSI']
+#     if rsi_value > 70:
+#         rsi_interpretation = "Overbought (Potential Sell)"
+#     elif rsi_value < 30:
+#         rsi_interpretation = "Oversold (Potential Buy)"
+#     else:
+#         rsi_interpretation = "Neutral"
+#     st.write(f"**RSI (14):** {rsi_value:.2f} ({rsi_interpretation})")
+
+#     # MACD Interpretation
+#     macd_value = summary['MACD']
+#     signal_value = summary['Signal']
+#     if macd_value > signal_value:
+#         macd_interpretation = "Potential Buy (MACD > Signal)"
+#     else:
+#         macd_interpretation = "Potential Sell (MACD < Signal)"
+#     st.write(f"**MACD:** {macd_value:.2f}")
+#     st.write(f"**Signal Line:** {signal_value:.2f}")
+#     st.write(f"**MACD Interpretation:** {macd_interpretation}")
+
+#     # Fetch and analyze news sentiment
+#     st.subheader("Sentiment Analysis")
+#     news = fetch_stock_news(ticker)
+#     if news:
+#         st.write(f"Top 5 news headlines for {ticker}:")
+#         sentiment_scores = []
+#         sentiment_labels = []
+
+#         for item in news[:5]:  # Show top 5 news items
+#             title = item.get("title", "No title available")
+#             source = item.get("source", {}).get("name", "No source available")
+
+#             st.write(f"**{title}**")
+#             st.write(f"Source: {source}")
+
+#             # Analyze sentiment
+#             dominant_sentiment, dominant_value = analyze_sentiment(title)
+#             sentiment_scores.append(dominant_value)
+#             sentiment_labels.append(dominant_sentiment)
+
+#             st.write(f"Sentiment: {dominant_sentiment} ({dominant_value:.2f})")
+#             st.write("---")
+
+#         # Sentiment Summary
+#         positive_count = sentiment_labels.count("Positive")
+#         negative_count = sentiment_labels.count("Negative")
+#         neutral_count = sentiment_labels.count("Neutral")
+
+#         # Determine overall sentiment based on majority voting
+#         if positive_count > negative_count and positive_count > neutral_count:
+#             overall_sentiment = "Positive"
+#         elif negative_count > positive_count and negative_count > neutral_count:
+#             overall_sentiment = "Negative"
+#         else:
+#             overall_sentiment = "Neutral"
+
+#         avg_sentiment = sum(sentiment_scores) / len(sentiment_scores) if sentiment_scores else 0
+
+#         st.subheader("Sentiment Summary")
+#         st.write(f"Average Sentiment Score: {avg_sentiment:.2f}")
+#         st.write(f"Overall Sentiment: {overall_sentiment}")
+
+#     else:
+#         st.write("No news available for this stock.")
