@@ -6,7 +6,7 @@ from agents.sentiment_analyst import analyze_sentiment
 from visualizations.visualize_stock import plot_stock_plotly
 
 # Define the workflow
-from langgraph.graph import StateGraph  # Import StateGraph
+from langgraph.graph import StateGraph  
 
 from typing import TypedDict
 from langgraph.graph import StateGraph
@@ -44,12 +44,6 @@ if st.button("Analyze"):
     st.subheader("Sentiment Analysis")
     st.write(result["sentiment_analysis"])
     st.plotly_chart(plot_stock_plotly(result["technical_data"], ticker))
-
-
-
-
-
-
 
 
 
