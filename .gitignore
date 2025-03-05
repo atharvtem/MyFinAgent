@@ -1,4 +1,5 @@
 __pycache__/
 .env
 stock_env/
-
+OAI_CONFIG_LIST.json
+api_info.py
